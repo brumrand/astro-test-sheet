@@ -1,0 +1,1146 @@
+---
+import EterRadar from './EterRadar.astro';
+import {
+	BASE_STATS,
+	BASE_INFLUENCES,
+	MAGIC_TYPES,
+	ETER_STATS,
+	ETER_MAX,
+	GRADE_SCALE,
+	DEFAULT_BASE,
+	MAX_BASE,
+	computeEter,
+	defaultBaseValues,
+	totalBase,
+	topGrade,
+} from '../data/eter';
+
+const initial = computeEter(defaultBaseValues());
+const initialTotal = totalBase(defaultBaseValues());
+const initialTop = topGrade(initial);
+---
+
+<section class="sheet" id="eter-sheet">
+	<!-- ── Cabecera ─────────────────────────────────────────────── -->
+	<header class="head">
+		<div class="head-intro">
+			<p class="eyebrow">Sistema de Éter</p>
+			<h1>Ficha de Rol</h1>
+			<p class="lede">
+				Ajusta los atributos base y las 11 estadísticas de Éter se recalculan
+				al instante, con su Grado (I–VII) y su perfil de rendimiento.
+			</p>
+		</div>
+
+		<div class="head-fields">
+			<div class="field">
+				<label for="char-name">Nombre</label>
+				<input
+					type="text"
+					id="char-name"
+					placeholder="Sin nombre"
+					autocomplete="off"
+					spellcheck="false"
+				/>
+			</div>
+			<div class="field">
+				<label for="char-level">Nivel</label>
+				<input
+					type="number"
+					id="char-level"
+					placeholder="1"
+					min="0"
+					step="1"
+					inputmode="numeric"
+				/>
+			</div>
+		</div>
+	</header>
+
+	<!-- ── Resumen ──────────────────────────────────────────────── -->
+	<div class="readout" role="group" aria-label="Resumen de la ficha">
+		<div class="readout-cell">
+			<span class="readout-label">Grado máximo</span>
+			<span class="readout-value" id="out-grade">
+				Grado {initialTop.roman}
+			</span>
+			<span class="readout-note" id="out-grade-note">{initialTop.theoretical}</span>
+		</div>
+		<div class="readout-cell">
+			<span class="readout-label">Suma base total</span>
+			<span class="readout-value" id="out-total">{initialTotal}</span>
+			<span class="readout-note">máx. {MAX_BASE * BASE_STATS.length}</span>
+		</div>
+		<div class="readout-cell">
+			<span class="readout-label">Grado V o superior</span>
+			<span class="readout-value" id="out-superior">
+				{
+					initial.filter((e) => e.grade.max >= 20).length
+				}
+				<span class="readout-unit">/ {ETER_STATS.length}</span>
+			</span>
+			<span class="readout-note">estadísticas de Éter</span>
+		</div>
+		<div class="readout-cell readout-cell--action">
+			<button type="button" class="btn" id="reset">
+				<svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16">
+					<path
+						d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1M3.5 4.5V10H9"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					></path>
+				</svg>
+				Restablecer
+			</button>
+		</div>
+	</div>
+
+	<!-- ── Atributos base ───────────────────────────────────────── -->
+	<section class="panel" aria-labelledby="h-base">
+		<div class="panel-head">
+			<h2 id="h-base">Atributos base</h2>
+			<p>
+				Valor inicial {DEFAULT_BASE}. Máximo {MAX_BASE}. Cada estadística de Éter
+				es la suma de 3 de estos atributos.
+			</p>
+		</div>
+
+		<div class="base-grid">
+			{
+				BASE_STATS.map((stat) => (
+					<article class="stat">
+						<div class="stat-head">
+							<div class="stat-id">
+								<span class="tag">{stat.id}</span>
+								<h3>{stat.name}</h3>
+							</div>
+							<div class="stepper">
+								<button
+									type="button"
+									data-stat={stat.id}
+									data-delta="-1"
+									aria-label={`Reducir ${stat.name}`}
+								>
+									&minus;
+								</button>
+								<input
+									type="number"
+									id={`base-${stat.id}`}
+									class="stepper-input"
+									min="0"
+									max={MAX_BASE}
+									step="1"
+									value={DEFAULT_BASE}
+									inputmode="numeric"
+									aria-label={`${stat.name} (0 a ${MAX_BASE})`}
+								/>
+								<button
+									type="button"
+									data-stat={stat.id}
+									data-delta="1"
+									aria-label={`Aumentar ${stat.name}`}
+								>
+									+
+								</button>
+							</div>
+						</div>
+
+						<p class="stat-influences">
+							<span class="stat-key">Influye en</span>
+							{BASE_INFLUENCES[stat.id].join(' · ')}
+						</p>
+						<p class="stat-just">{stat.justification}</p>
+					</article>
+				))
+			}
+		</div>
+	</section>
+
+	<!-- ── Gráfico ──────────────────────────────────────────────── -->
+	<section class="panel" aria-labelledby="h-radar">
+		<div class="panel-head">
+			<h2 id="h-radar">Gráfico de araña</h2>
+			<p>Perfil de las estadísticas de Éter. Rango {3} – {ETER_MAX}.</p>
+		</div>
+		<EterRadar />
+	</section>
+
+	<!-- ── Estadísticas de Éter ─────────────────────────────────── -->
+	<section class="panel panel--full" aria-labelledby="h-eter">
+		<div class="panel-head">
+			<h2 id="h-eter">Estadísticas de Éter</h2>
+			<p>
+				Grado calculado sobre la suma de sus 3 atributos base, de {3} a {ETER_MAX}.
+			</p>
+		</div>
+
+		<div class="table-wrap">
+			<table class="table">
+				<thead>
+					<tr>
+						<th scope="col">Estadística</th>
+						<th scope="col">Suma</th>
+						<th scope="col">Grado</th>
+						<th scope="col">Nivel teórico</th>
+						<th scope="col">Habilidad desbloqueada</th>
+						<th scope="col">Función mecánica</th>
+					</tr>
+				</thead>
+				<tbody>
+					{
+						initial.map((row, i) => (
+							<tr data-row={i}>
+								<th scope="row" class="cell-name">
+									<span class="cell-marker" aria-hidden="true" />
+									{row.stat.name}
+								</th>
+								<td class="cell-sum">
+									<code class="formula" title="Atributos base sumados">
+										{row.formulaLabel}
+									</code>
+									<output class="sum" data-eter-sum={i}>
+										{row.sum}
+									</output>
+								</td>
+								<td>
+									<span class="grade" data-eter-grade={i} data-grade={row.grade.roman}>
+										{row.grade.roman}
+									</span>
+								</td>
+								<td class="cell-note" data-eter-theory={i}>
+									{row.grade.theoretical}
+								</td>
+								<td class="cell-unlock">{row.stat.unlocked}</td>
+								<td class="cell-note cell-mechanic">{row.stat.mechanic}</td>
+							</tr>
+						))
+					}
+				</tbody>
+			</table>
+		</div>
+	</section>
+
+	<!-- ── Escala de grados ─────────────────────────────────────── -->
+	<section class="panel" aria-labelledby="h-scale">
+		<div class="panel-head">
+			<h2 id="h-scale">Escala de conversión a grados</h2>
+			<p>Referencia de rendimiento por rango de suma.</p>
+		</div>
+
+		<div class="table-wrap">
+			<table class="table table--scale">
+				<thead>
+					<tr>
+						<th scope="col">Suma base</th>
+						<th scope="col">Grado</th>
+						<th scope="col">Nivel teórico</th>
+						<th scope="col">Perfil de rendimiento</th>
+					</tr>
+				</thead>
+				<tbody>
+					{
+						GRADE_SCALE.map((g) => (
+							<tr>
+								<th scope="row" class="cell-range">
+									{g.min} – {g.max}
+								</th>
+								<td>
+									<span class="grade" data-grade={g.roman}>
+										{g.roman}
+									</span>
+								</td>
+								<td class="cell-name-sm">{g.theoretical}</td>
+								<td class="cell-note">{g.profile}</td>
+							</tr>
+						))
+					}
+				</tbody>
+			</table>
+		</div>
+	</section>
+
+	<!-- ── Tipos de magia ──────────────────────────────────────── -->
+	<section class="panel panel--full" aria-labelledby="h-schools">
+		<div class="panel-head">
+			<h2 id="h-schools">Tipos de magia</h2>
+			<p>
+				{MAGIC_TYPES.length} escuelas disponibles, cada una con su alcance y su
+				compromiso de Éter.
+			</p>
+		</div>
+
+		<div class="school-grid">
+			{
+				MAGIC_TYPES.map((school) => (
+					<article class="school">
+						<div class="school-id">
+							<span class="tag">{school.id}</span>
+							<h3>{school.name}</h3>
+						</div>
+						<p class="school-scope">{school.scope}</p>
+						<p class="school-eff">
+							<span class="stat-key">Compromiso</span>
+							{school.efficiency}
+						</p>
+					</article>
+				))
+			}
+		</div>
+	</section>
+</section>
+
+<script>
+	import {
+		BASE_STATS,
+MAGIC_TYPES,
+	ETER_STATS,
+		ETER_MAX,
+		MAX_BASE,
+		DEFAULT_BASE,
+		clampBase,
+		computeEter,
+		defaultBaseValues,
+		totalBase,
+		topGrade,
+		type BaseValues,
+	} from '../data/eter';
+	import { seriesPoints, axisPoint } from '../lib/radar';
+
+	const STORAGE_KEY = 'eter-sheet:v1';
+
+	const sheet = document.getElementById('eter-sheet');
+	if (sheet) {
+		const nameInput = sheet.querySelector<HTMLInputElement>('#char-name');
+		const levelInput = sheet.querySelector<HTMLInputElement>('#char-level');
+		const resetBtn = sheet.querySelector<HTMLButtonElement>('#reset');
+
+		const outGrade = sheet.querySelector('#out-grade');
+		const outGradeNote = sheet.querySelector('#out-grade-note');
+		const outTotal = sheet.querySelector('#out-total');
+		const outSuperior = sheet.querySelector('#out-superior');
+
+		const radarFill = sheet.querySelector<SVGPolygonElement>('.shape-fill');
+		const radarLine = sheet.querySelector<SVGPolygonElement>('#radar-line');
+
+		const baseInputs = new Map<string, HTMLInputElement>();
+		for (const stat of BASE_STATS) {
+			const el = sheet.querySelector<HTMLInputElement>(`#base-${stat.id}`);
+			if (el) baseInputs.set(stat.id, el);
+		}
+
+		interface SheetState {
+			name: string;
+			level: string;
+			base: BaseValues;
+		}
+
+		function sanitizeState(raw: unknown): SheetState {
+			const fallback: SheetState = {
+				name: '',
+				level: '',
+				base: defaultBaseValues(),
+			};
+			if (!raw || typeof raw !== 'object') return fallback;
+			const data = raw as Partial<SheetState>;
+			const base = defaultBaseValues();
+			if (data.base && typeof data.base === 'object') {
+				for (const stat of BASE_STATS) {
+					const value = (data.base as Record<string, unknown>)[stat.id];
+					if (typeof value === 'number' && Number.isFinite(value)) {
+						base[stat.id] = clampBase(value);
+					}
+				}
+			}
+			return {
+				name: typeof data.name === 'string' ? data.name.slice(0, 60) : '',
+				level: typeof data.level === 'string' ? data.level.slice(0, 6) : '',
+				base,
+			};
+		}
+
+		function load(): SheetState {
+			try {
+				const stored = window.localStorage.getItem(STORAGE_KEY);
+				return stored ? sanitizeState(JSON.parse(stored)) : sanitizeState(null);
+			} catch {
+				return sanitizeState(null);
+			}
+		}
+
+		function save(state: SheetState) {
+			try {
+				window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+			} catch {
+				/* almacenamiento no disponible: la ficha sigue funcionando */
+			}
+		}
+
+		let state = load();
+
+		function currentBase(): BaseValues {
+			return state.base;
+		}
+
+		function render() {
+			const base = currentBase();
+			const eter = computeEter(base);
+			const values = eter.map((e) => e.sum);
+			const count = ETER_STATS.length;
+
+			// Resumen
+			const top = topGrade(eter);
+			if (outGrade) outGrade.textContent = `Grado ${top.roman}`;
+			if (outGradeNote) outGradeNote.textContent = top.theoretical;
+			if (outTotal) outTotal.textContent = String(totalBase(base));
+			if (outSuperior) {
+				const high = eter.filter((e) => e.grade.max >= 20).length;
+				outSuperior.innerHTML = `${high}<span class="readout-unit">/ ${count}</span>`;
+			}
+
+			// Inputs
+			for (const stat of BASE_STATS) {
+				const el = baseInputs.get(stat.id);
+				if (el && document.activeElement !== el) {
+					el.value = String(base[stat.id]);
+				}
+			}
+			if (nameInput && document.activeElement !== nameInput) {
+				nameInput.value = state.name;
+			}
+			if (levelInput && document.activeElement !== levelInput) {
+				levelInput.value = state.level;
+			}
+
+			// Tabla
+			eter.forEach((row, i) => {
+				const sum = sheet.querySelector<HTMLOutputElement>(
+					`[data-eter-sum="${i}"]`,
+				);
+				if (sum) sum.textContent = String(row.sum);
+
+				const grade = sheet.querySelector<HTMLElement>(
+					`[data-eter-grade="${i}"]`,
+				);
+				if (grade) {
+					grade.textContent = row.grade.roman;
+					grade.dataset.grade = row.grade.roman;
+				}
+
+				const theory = sheet.querySelector<HTMLElement>(
+					`[data-eter-theory="${i}"]`,
+				);
+				if (theory) theory.textContent = row.grade.theoretical;
+			});
+
+			// Gráfico
+			const points = seriesPoints(values, ETER_MAX);
+			if (radarFill) radarFill.setAttribute('points', points);
+			if (radarLine) radarLine.setAttribute('points', points);
+			eter.forEach((row, i) => {
+				const dot = sheet.querySelector<SVGCircleElement>(`#radar-point-${i}`);
+				if (dot) {
+					const { x, y } = axisPoint(i, count, row.sum / ETER_MAX);
+					dot.setAttribute('cx', x.toFixed(2));
+					dot.setAttribute('cy', y.toFixed(2));
+					dot.innerHTML = `<title>${row.stat.name}: ${row.sum} · Grado ${row.grade.roman}</title>`;
+				}
+				const label = sheet.querySelector(`#radar-value-${i}`);
+				if (label) {
+					label.textContent = `${row.sum} · ${row.grade.roman}`;
+				}
+			});
+		}
+
+		function commit() {
+			save(state);
+			render();
+		}
+
+		function setBase(id: string, value: number) {
+			state.base[id as keyof BaseValues] = clampBase(value);
+			commit();
+		}
+
+		// Inputs numéricos
+		for (const stat of BASE_STATS) {
+			const el = baseInputs.get(stat.id);
+			if (!el) continue;
+			el.addEventListener('input', () => {
+				const parsed = Number.parseInt(el.value, 10);
+				state.base[stat.id] = Number.isNaN(parsed)
+					? 0
+					: clampBase(parsed);
+				commit();
+			});
+			el.addEventListener('blur', () => {
+				el.value = String(state.base[stat.id]);
+			});
+		}
+
+		// Steppers
+		sheet.querySelectorAll<HTMLButtonElement>('[data-delta]').forEach((btn) => {
+			btn.addEventListener('click', () => {
+				const id = btn.dataset.stat;
+				const delta = Number.parseInt(btn.dataset.delta ?? '0', 10);
+				if (!id || !delta) return;
+				setBase(id, (state.base[id as keyof BaseValues] ?? DEFAULT_BASE) + delta);
+				const el = baseInputs.get(id);
+				el?.focus();
+			});
+		});
+
+		// Identidad
+		nameInput?.addEventListener('input', () => {
+			state.name = nameInput.value;
+			commit();
+		});
+		levelInput?.addEventListener('input', () => {
+			state.level = levelInput.value;
+			commit();
+		});
+
+		resetBtn?.addEventListener('click', () => {
+			state = { name: '', level: '', base: defaultBaseValues() };
+			commit();
+		});
+
+		// Rango del atributo base sincronizado con la regla del sistema.
+		sheet.querySelectorAll<HTMLInputElement>('.stepper-input').forEach((el) => {
+			el.max = String(MAX_BASE);
+		});
+
+		render();
+	}
+</script>
+
+<style>
+	.sheet {
+		--bg-primary: #0f0c14;
+		--bg-panel: #191522;
+		--bg-raise: #1f1a2b;
+		--border: #393149;
+		--text: #e9e2d0;
+		--text-dim: #a9a1b8;
+		--arcane: #9b5de5;
+		--ether: #d946ef;
+		--cyan: #4cc9f0;
+		--jade: #43d17a;
+		--crimson: #e63956;
+		--gold: #d4a84f;
+
+		display: flex;
+		flex-direction: column;
+		gap: 1.25rem;
+		color: var(--text);
+		font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	}
+
+	/* ── Cabecera ─────────────────────────────────────────────── */
+	.head {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-end;
+		justify-content: space-between;
+		gap: 1.25rem 2rem;
+		padding: 1.5rem 1.75rem;
+		border: 1px solid var(--border);
+		border-radius: 14px;
+		background:
+			radial-gradient(
+				85% 130% at 0% 0%,
+				rgba(155, 93, 229, 0.2) 0%,
+				rgba(25, 21, 34, 0) 70%
+			),
+			radial-gradient(
+				70% 100% at 100% 0%,
+				rgba(76, 201, 240, 0.14) 0%,
+				rgba(25, 21, 34, 0) 70%
+			),
+			var(--bg-panel);
+		box-shadow:
+			0 0 0 1px rgba(155, 93, 229, 0.12) inset,
+			0 24px 70px -40px rgba(217, 70, 239, 0.45);
+	}
+
+	.eyebrow {
+		margin: 0 0 0.35rem;
+		font-size: 0.72rem;
+		font-weight: 600;
+		letter-spacing: 0.22em;
+		text-transform: uppercase;
+		color: var(--ether);
+	}
+
+	.head h1 {
+		margin: 0;
+		font-family: 'Unbounded', 'Inter', system-ui, sans-serif;
+		font-size: clamp(1.6rem, 4.5vw, 2.4rem);
+		font-weight: 600;
+		letter-spacing: -0.015em;
+		line-height: 1.05;
+		background: linear-gradient(100deg, #f6f1ff 0%, #d9c9ff 45%, var(--arcane) 100%);
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+	}
+
+	.lede {
+		margin: 0.5rem 0 0;
+		max-width: 58ch;
+		color: var(--text-dim);
+		font-size: 0.92rem;
+		line-height: 1.6;
+	}
+
+	.head-fields {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+	}
+
+	.field {
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+	}
+
+	.field label {
+		font-size: 0.7rem;
+		font-weight: 600;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--text-dim);
+	}
+
+	.field input {
+		width: 100%;
+		min-width: 11rem;
+		padding: 0.5rem 0.75rem;
+		border: 1px solid var(--border);
+		border-radius: 9px;
+		background: rgba(15, 12, 20, 0.65);
+		color: var(--text);
+		font: inherit;
+		font-weight: 500;
+		transition:
+			border-color 0.15s ease,
+			box-shadow 0.15s ease;
+	}
+
+	.field input::placeholder {
+		color: rgba(169, 161, 184, 0.45);
+	}
+
+	.field input:focus-visible {
+		outline: none;
+		border-color: var(--arcane);
+		box-shadow: 0 0 0 3px rgba(155, 93, 229, 0.18);
+	}
+
+	.field--level input {
+		min-width: 6rem;
+	}
+
+	/* ── Resumen ──────────────────────────────────────────────── */
+	.readout {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+		gap: 1px;
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		background: var(--border);
+		overflow: hidden;
+	}
+
+	.readout-cell {
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+		padding: 0.85rem 1rem;
+		background: var(--bg-panel);
+	}
+
+	.readout-cell--action {
+		justify-content: center;
+	}
+
+	.readout-label {
+		font-size: 0.68rem;
+		font-weight: 600;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--text-dim);
+	}
+
+	.readout-value {
+		font-family: 'Unbounded', 'Inter', system-ui, sans-serif;
+		font-size: 1.35rem;
+		font-weight: 600;
+		line-height: 1.2;
+		color: var(--text);
+	}
+
+	.readout-unit {
+		font-size: 0.8rem;
+		color: var(--text-dim);
+	}
+
+	.readout-note {
+		font-size: 0.78rem;
+		color: var(--text-dim);
+	}
+
+	/* ── Paneles ──────────────────────────────────────────────── */
+	.panel {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		padding: 1.25rem 1.4rem 1.4rem;
+		border: 1px solid var(--border);
+		border-radius: 14px;
+		background: var(--bg-panel);
+		box-shadow: 0 0 0 1px rgba(155, 93, 229, 0.07) inset;
+	}
+
+	.panel-head h2 {
+		margin: 0;
+		font-family: 'Unbounded', 'Inter', system-ui, sans-serif;
+		font-size: 0.98rem;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--text);
+	}
+
+	.panel-head p {
+		margin: 0.3rem 0 0;
+		font-size: 0.85rem;
+		color: var(--text-dim);
+	}
+
+	/* ── Atributos base ───────────────────────────────────────── */
+	.base-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
+		gap: 0.85rem;
+	}
+
+	.stat {
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+		padding: 0.9rem 1rem 1rem;
+		border: 1px solid rgba(57, 49, 73, 0.9);
+		border-radius: 12px;
+		background:
+			radial-gradient(
+				120% 100% at 0% 0%,
+				rgba(155, 93, 229, 0.13) 0%,
+				rgba(31, 26, 43, 0) 70%
+			),
+			var(--bg-raise);
+		transition:
+			border-color 0.15s ease,
+			transform 0.15s ease;
+	}
+
+	.stat:hover {
+		border-color: rgba(155, 93, 229, 0.5);
+		transform: translateY(-1px);
+	}
+
+	.stat-head {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 0.75rem;
+	}
+
+	.stat-id {
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+	}
+
+	.tag {
+		align-self: flex-start;
+		padding: 0.1rem 0.45rem;
+		border: 1px solid rgba(155, 93, 229, 0.5);
+		border-radius: 999px;
+		background: rgba(155, 93, 229, 0.18);
+		color: #f0e6ff;
+		font-size: 0.68rem;
+		font-weight: 700;
+		letter-spacing: 0.12em;
+	}
+
+	.stat-id h3 {
+		margin: 0;
+		font-size: 1rem;
+		font-weight: 600;
+	}
+
+	.stepper {
+		display: flex;
+		align-items: center;
+		gap: 0.15rem;
+		padding: 0.15rem;
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		background: rgba(15, 12, 20, 0.6);
+	}
+
+	.stepper button {
+		display: grid;
+		place-items: center;
+		width: 1.7rem;
+		height: 1.7rem;
+		border: 0;
+		border-radius: 999px;
+		background: transparent;
+		color: var(--text-dim);
+		font: inherit;
+		font-size: 1.05rem;
+		line-height: 1;
+		cursor: pointer;
+		transition:
+			background 0.14s ease,
+			color 0.14s ease;
+	}
+
+	.stepper button:hover {
+		background: rgba(155, 93, 229, 0.25);
+		color: var(--text);
+	}
+
+	.stepper button:focus-visible {
+		outline: 2px solid var(--arcane);
+		outline-offset: 1px;
+	}
+
+	.stepper-input {
+		width: 2.6rem;
+		padding: 0.15rem 0;
+		border: 0;
+		background: transparent;
+		color: var(--text);
+		font: inherit;
+		font-size: 1.15rem;
+		font-weight: 700;
+		font-variant-numeric: tabular-nums;
+		text-align: center;
+		-moz-appearance: textfield;
+		appearance: textfield;
+	}
+
+	.stepper-input::-webkit-outer-spin-button,
+	.stepper-input::-webkit-inner-spin-button {
+		-webkit-appearance: none;
+		margin: 0;
+	}
+
+	.stepper-input:focus-visible {
+		outline: none;
+		color: var(--ether);
+	}
+
+	.stat-influences {
+		margin: 0;
+		font-size: 0.8rem;
+		line-height: 1.55;
+		color: #cbc0dd;
+	}
+
+	.stat-key {
+		display: block;
+		margin-bottom: 0.1rem;
+		font-size: 0.66rem;
+		font-weight: 700;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--cyan);
+	}
+
+	.stat-just {
+		margin: 0;
+		padding-top: 0.55rem;
+		border-top: 1px solid rgba(57, 49, 73, 0.75);
+		font-size: 0.78rem;
+		font-style: italic;
+		line-height: 1.5;
+		color: var(--text-dim);
+	}
+
+	/* ── Tipos de magia ────────────────────────────────────────── */
+	.school-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
+		gap: 0.85rem;
+	}
+
+	.school {
+		display: flex;
+		flex-direction: column;
+		gap: 0.55rem;
+		padding: 0.9rem 1rem 1rem;
+		border: 1px solid rgba(57, 49, 73, 0.9);
+		border-radius: 12px;
+		background:
+			radial-gradient(
+				120% 100% at 100% 0%,
+				rgba(217, 70, 239, 0.13) 0%,
+				rgba(31, 26, 43, 0) 70%
+			),
+			var(--bg-raise);
+		transition:
+			border-color 0.15s ease,
+			transform 0.15s ease;
+	}
+
+	.school:hover {
+		border-color: rgba(217, 70, 239, 0.5);
+		transform: translateY(-1px);
+	}
+
+	.school-id {
+		display: flex;
+		align-items: center;
+		gap: 0.55rem;
+	}
+
+	.school-id h3 {
+		margin: 0;
+		font-size: 1rem;
+		font-weight: 600;
+	}
+
+	.school-id .tag {
+		align-self: center;
+	}
+
+	.school-scope {
+		margin: 0;
+		font-size: 0.82rem;
+		line-height: 1.55;
+		color: #d5cbe6;
+	}
+
+	.school-eff {
+		margin: 0;
+		padding-top: 0.55rem;
+		border-top: 1px solid rgba(57, 49, 73, 0.75);
+		font-size: 0.78rem;
+		line-height: 1.5;
+		color: var(--text-dim);
+	}
+
+	.school-eff .stat-key {
+		margin-bottom: 0.15rem;
+		color: var(--gold);
+	}
+
+	/* ── Tablas ───────────────────────────────────────────────── */
+	.table-wrap {
+		overflow-x: auto;
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		background: rgba(15, 12, 20, 0.35);
+	}
+
+	.table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 0.87rem;
+	}
+
+	.table thead th {
+		position: sticky;
+		top: 0;
+		z-index: 1;
+		padding: 0.6rem 0.85rem;
+		background: var(--bg-raise);
+		border-bottom: 1px solid var(--border);
+		font-size: 0.68rem;
+		font-weight: 700;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--text-dim);
+		text-align: left;
+		white-space: nowrap;
+	}
+
+	.table tbody tr {
+		border-bottom: 1px solid rgba(57, 49, 73, 0.55);
+		transition: background 0.13s ease;
+	}
+
+	.table tbody tr:last-child {
+		border-bottom: 0;
+	}
+
+	.table tbody tr:hover {
+		background: rgba(155, 93, 229, 0.09);
+	}
+
+	.table td,
+	.table th[scope='row'] {
+		padding: 0.6rem 0.85rem;
+		text-align: left;
+		vertical-align: top;
+		font-weight: 400;
+	}
+
+	.cell-name {
+		font-weight: 600;
+		white-space: nowrap;
+	}
+
+	.cell-marker {
+		display: inline-block;
+		width: 0.45rem;
+		height: 0.45rem;
+		margin-right: 0.5rem;
+		border-radius: 999px;
+		background: radial-gradient(circle at 35% 35%, #fff 0%, var(--ether) 70%);
+		box-shadow: 0 0 10px -1px var(--ether);
+		vertical-align: middle;
+	}
+
+	.cell-sum {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		white-space: nowrap;
+	}
+
+	.formula {
+		padding: 0.1rem 0.4rem;
+		border: 1px solid rgba(76, 201, 240, 0.4);
+		border-radius: 999px;
+		background: rgba(76, 201, 240, 0.12);
+		color: #d3f2ff;
+		font-family: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+		font-size: 0.72rem;
+		letter-spacing: 0.02em;
+	}
+
+	.sum {
+		font-family: 'Unbounded', 'Inter', system-ui, sans-serif;
+		font-size: 1.15rem;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+		color: var(--text);
+	}
+
+	.grade {
+		display: inline-grid;
+		place-items: center;
+		min-width: 2.4rem;
+		padding: 0.2rem 0.5rem;
+		border: 1px solid currentColor;
+		border-radius: 999px;
+		background: rgba(15, 12, 20, 0.5);
+		font-size: 0.78rem;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+	}
+
+	.grade[data-grade='I'] {
+		color: var(--text-dim);
+	}
+	.grade[data-grade='II'] {
+		color: var(--cyan);
+	}
+	.grade[data-grade='III'] {
+		color: var(--jade);
+	}
+	.grade[data-grade='IV'] {
+		color: var(--arcane);
+	}
+	.grade[data-grade='V'] {
+		color: var(--ether);
+	}
+	.grade[data-grade='VI'] {
+		color: var(--gold);
+	}
+	.grade[data-grade='VII'] {
+		color: var(--crimson);
+	}
+
+	.cell-unlock {
+		color: var(--gold);
+		font-weight: 600;
+		white-space: nowrap;
+	}
+
+	.cell-note {
+		color: var(--text-dim);
+		line-height: 1.5;
+	}
+
+	.cell-mechanic {
+		min-width: 18rem;
+	}
+
+	.cell-range {
+		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
+		color: var(--text-dim);
+	}
+
+	.table--scale tbody tr:nth-child(even) {
+		background: rgba(15, 12, 20, 0.3);
+	}
+
+	/* ── Botón ────────────────────────────────────────────────── */
+	.btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.4rem;
+		padding: 0.5rem 0.9rem;
+		border: 1px solid var(--border);
+		border-radius: 9px;
+		background: var(--bg-raise);
+		color: var(--text);
+		font: inherit;
+		font-size: 0.85rem;
+		font-weight: 500;
+		cursor: pointer;
+		transition:
+			border-color 0.15s ease,
+			background 0.15s ease;
+	}
+
+	.btn:hover {
+		border-color: var(--arcane);
+		background: rgba(155, 93, 229, 0.16);
+	}
+
+	.btn:focus-visible {
+		outline: 2px solid var(--arcane);
+		outline-offset: 2px;
+	}
+
+	@media (max-width: 560px) {
+		.head,
+		.panel {
+			padding-inline: 1rem;
+		}
+
+		.field input {
+			min-width: 0;
+		}
+
+		.head-fields {
+			width: 100%;
+		}
+
+		.field {
+			flex: 1 1 8rem;
+		}
+	}
+</style>

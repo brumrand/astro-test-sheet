@@ -1,0 +1,299 @@
+---
+import { ETER_STATS, ETER_MAX, computeEter, defaultBaseValues } from '../data/eter';
+import {
+	RADAR_VIEWBOX,
+	RADAR_CX,
+	RADAR_CY,
+	RADAR_RINGS,
+	axisPoint,
+	ringPoints,
+	seriesPoints,
+	labelPlacement,
+} from '../lib/radar';
+
+/** Etiquetas cortas para los ejes (el nombre completo va en el tooltip). */
+const SHORT_LABEL: Record<string, string> = {
+	'Volumen de Éter': 'Volumen',
+	Caudal: 'Caudal',
+	Recuperación: 'Recuperación',
+	'Velocidad de Flujo': 'Velocidad',
+	'Precisión de Flujo': 'Precisión',
+	'Movilización Directa': 'Movilización',
+	'Ocultamiento de Éter': 'Ocultamiento',
+	'Control de Presión': 'Control',
+	Redundancia: 'Redundancia',
+	'Disponibilidad en Red': 'Disponib. Red',
+	Compresión: 'Compresión',
+};
+
+const eter = computeEter(defaultBaseValues());
+const initial = eter.map((e) => e.sum);
+const n = ETER_STATS.length;
+---
+
+<figure class="radar">
+	<svg
+		id="eter-radar"
+		viewBox={RADAR_VIEWBOX}
+		role="img"
+		aria-label="Gráfico de araña de las 11 estadísticas de Éter"
+	>
+		<title>Perfil de estadísticas de Éter</title>
+
+		<defs>
+			<radialGradient id="fill-grad" cx="50%" cy="50%" r="50%">
+				<stop offset="0%" stop-color="#d946ef" stop-opacity="0.42" />
+				<stop offset="55%" stop-color="#9b5de5" stop-opacity="0.26" />
+				<stop offset="100%" stop-color="#4cc9f0" stop-opacity="0.1" />
+			</radialGradient>
+
+			<linearGradient id="line-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+				<stop offset="0%" stop-color="#d946ef" />
+				<stop offset="50%" stop-color="#9b5de5" />
+				<stop offset="100%" stop-color="#4cc9f0" />
+			</linearGradient>
+
+			<filter id="shape-glow" x="-40%" y="-40%" width="180%" height="180%">
+				<feGaussianBlur stdDeviation="7" result="blur" />
+				<feMerge>
+					<feMergeNode in="blur" />
+					<feMergeNode in="SourceGraphic" />
+				</feMerge>
+			</filter>
+
+			<filter id="point-glow" x="-120%" y="-120%" width="340%" height="340%">
+				<feGaussianBlur stdDeviation="2.6" result="b" />
+				<feMerge>
+					<feMergeNode in="b" />
+					<feMergeNode in="SourceGraphic" />
+				</feMerge>
+			</filter>
+		</defs>
+
+		<!-- Retícula: anillos de 6 en 6 hasta el máximo -->
+		<g class="reticle">
+			{
+				RADAR_RINGS.map((value) => (
+					<polygon
+						class="ring"
+						data-ring={value}
+						points={ringPoints(n, value / ETER_MAX)}
+					/>
+				))
+			}
+			{ETER_STATS.map((_, i) => {
+				const { x, y } = axisPoint(i, n, 1);
+				return <line class="spoke" x1={RADAR_CX} y1={RADAR_CY} x2={x} y2={y} />;
+			})}
+		</g>
+
+		<!-- Marcas de valor sobre el eje superior -->
+		<g class="ticks">
+			{
+				RADAR_RINGS.map((value) => {
+					const { x, y } = axisPoint(0, n, value / ETER_MAX);
+					return (
+						<text x={x + 6} y={y + 4} class="tick">
+							{value}
+						</text>
+					);
+				})
+			}
+		</g>
+
+		<!-- Serie de datos: el script cliente sólo actualiza `points` -->
+		<polygon class="shape-fill" points={seriesPoints(initial, ETER_MAX)} />
+		<polygon
+			id="radar-line"
+			class="shape-line"
+			points={seriesPoints(initial, ETER_MAX)}
+		/>
+
+		<!-- Puntos por eje -->
+		<g class="points" filter="url(#point-glow)">
+			{
+				ETER_STATS.map((stat, i) => {
+					const { x, y } = axisPoint(
+						i,
+						n,
+						eter[i].sum / ETER_MAX,
+					);
+					return (
+						<circle
+							id={`radar-point-${i}`}
+							class="point"
+							cx={x}
+							cy={y}
+							r="3.6"
+						>
+							<title>{`${stat.name}: ${eter[i].sum} · Grado ${eter[i].grade.roman}`}</title>
+						</circle>
+					);
+				})
+			}
+		</g>
+
+		<!-- Etiquetas de eje: nombre (fijo) + valor (dinámico) -->
+		<g class="axis-labels">
+			{
+				ETER_STATS.map((stat, i) => {
+					const place = labelPlacement(i, n);
+					return (
+						<g
+							class="axis-label"
+							transform={`translate(${place.x.toFixed(2)}, ${place.y.toFixed(2)})`}
+						>
+							<text text-anchor={place.anchor} y={place.dyName}>
+								{SHORT_LABEL[stat.name] ?? stat.name}
+							</text>
+							<text
+								id={`radar-value-${i}`}
+								class="axis-value"
+								text-anchor={place.anchor}
+								y={place.dyValue}
+							>
+								{`${eter[i].sum} · ${eter[i].grade.roman}`}
+							</text>
+						</g>
+					);
+				})
+			}
+		</g>
+	</svg>
+
+	<figcaption>
+		<span class="cap-item">
+			<span class="swatch swatch--series" aria-hidden="true"></span>
+			Estadísticas de Éter (3–30)
+		</span>
+		<span class="cap-item">
+			<span class="swatch swatch--max" aria-hidden="true"></span>
+			Anillo exterior = 30 · Grado VII
+		</span>
+	</figcaption>
+</figure>
+
+<style>
+	.radar {
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.radar svg {
+		display: block;
+		width: 100%;
+		height: auto;
+		max-width: 620px;
+		margin-inline: auto;
+		overflow: visible;
+	}
+
+	/* Retícula */
+	.reticle .ring {
+		fill: none;
+		stroke: #393149;
+		stroke-width: 1;
+	}
+
+	.reticle .ring[data-ring='30'] {
+		stroke: #d4a84f;
+		stroke-opacity: 0.55;
+		stroke-dasharray: 3 4;
+	}
+
+	.reticle .spoke {
+		stroke: #393149;
+		stroke-opacity: 0.8;
+		stroke-width: 1;
+	}
+
+	.tick {
+		fill: #a9a1b8;
+		font-size: 10px;
+		font-weight: 500;
+		letter-spacing: 0.04em;
+	}
+
+	/* Serie */
+	.shape-fill {
+		fill: url(#fill-grad);
+		stroke: none;
+		pointer-events: none;
+	}
+
+	.shape-line {
+		fill: none;
+		stroke: url(#line-grad);
+		stroke-width: 2.25;
+		stroke-linejoin: round;
+		filter: url(#shape-glow);
+		pointer-events: none;
+	}
+
+	.point {
+		fill: #e9e2d0;
+		stroke: #9b5de5;
+		stroke-width: 1.75;
+		cursor: help;
+	}
+
+	/* Etiquetas */
+	.axis-label text {
+		fill: #e9e2d0;
+		font-size: 13px;
+		font-weight: 500;
+	}
+
+	.axis-label .axis-value {
+		fill: #a9a1b8;
+		font-size: 10.5px;
+		font-weight: 600;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+	}
+
+	figcaption {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem 1.25rem;
+		color: #a9a1b8;
+		font-size: 0.82rem;
+	}
+
+	.cap-item {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+	}
+
+	.swatch {
+		width: 0.65rem;
+		height: 0.65rem;
+		border-radius: 999px;
+	}
+
+	.swatch--series {
+		background: linear-gradient(135deg, #d946ef, #4cc9f0);
+		box-shadow: 0 0 12px -2px #d946ef;
+	}
+
+	.swatch--max {
+		background: transparent;
+		border: 1px dashed #d4a84f;
+	}
+
+	@media (max-width: 560px) {
+		.radar svg {
+			/* Mantiene las etiquetas legibles en pantallas estrechas. */
+			min-height: 300px;
+		}
+
+		.axis-label text {
+			font-size: 12.5px;
+		}
+	}
+</style>

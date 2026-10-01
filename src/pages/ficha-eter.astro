@@ -1,0 +1,22 @@
+---
+import EterSheet from '../components/EterSheet.astro';
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout
+	title="Ficha de Rol · Atributos de Éter"
+	description="Ficha de rol automática: calcula las 11 estadísticas de Éter a partir de los atributos base, con Grado I–VII y gráfico de araña en tiempo real."
+>
+	<main class="wrap">
+		<EterSheet />
+	</main>
+</Layout>
+
+<style>
+	.wrap {
+		max-width: 78rem;
+		margin-inline: auto;
+		padding: clamp(1rem, 3vw, 2.5rem) clamp(0.85rem, 3vw, 1.75rem)
+			clamp(2rem, 5vw, 3.5rem);
+	}
+</style>
